@@ -51,25 +51,33 @@ def publish(topic, message):
     if client_id is None or client_id == '':
         return flask.Response(response='Client-Id header not found or not properly evaluated', status=500)
 
+    expire = flask.request.args.get('expire')
+    if expire is None or expire == '':
+        expire = '30'
+
     query = tinydb.Query()
 
     lock.acquire()
 
     try:
         docs = db.search(query.topic == topic)
-        guid = str(uuid.uuid1())
-        max_queue = -1
-        if len(docs) > 0:
-            max_queue = max(doc['queue'] for doc in docs)
-        db.insert({ 
-            'id': guid,
-            'topic': topic,
-            'message': message,
-            'queue': max_queue + 1,
-            'created_by': client_id,
-            'created_at': datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            'readed_from': []
-        })
+        if expire == 'never' and len(docs) > 0:
+            db.update({ 'message': message, 'created_by': client_id }, query.id == docs[0]['id'])
+        else:
+            guid = str(uuid.uuid1())
+            max_queue = -1
+            if len(docs) > 0:
+                max_queue = max(doc['queue'] for doc in docs)
+            db.insert({ 
+                'id': guid,
+                'topic': topic,
+                'message': message,
+                'queue': max_queue + 1,
+                'expire': expire,
+                'created_by': client_id,
+                'created_at': datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                'readed_from': []
+            })
     finally:
         lock.release()
 
@@ -84,6 +92,9 @@ def subscribe(topic):
         return flask.Response(response='Client-Id header not found or not properly evaluated', status=500)
 
     poll = flask.request.args.get('poll')
+    last = flask.request.args.get('last')
+    if last is None or last == '':
+        last = 'false'
     
     counter = 1 if poll == 'true' else 25
     message = None
@@ -99,14 +110,16 @@ def subscribe(topic):
                 
                 for doc in docs:
                     created_at = datetime.datetime.strptime(doc['created_at'], "%d/%m/%Y %H:%M:%S")
+                    expire = doc['expire']
 
-                    if (created_at + datetime.timedelta(minutes=10) < datetime.datetime.now()):
+                    if expire.isnumeric() and (created_at + datetime.timedelta(seconds=int(expire)) < datetime.datetime.now()):
                         query = tinydb.Query()
                         db.remove(query.id == doc['id'])
-                    else:
-                        readed_from = doc['readed_from']
-                        readed_from.append(client_id)
-                        db.update({ 'readed_from': readed_from }, query.id == doc['id'])
+                    elif last == 'false' or (last == 'true' and doc['id'] == docs[len(docs) - 1]['id']):
+                        if doc['expire'] != 'never':
+                            readed_from = doc['readed_from']
+                            readed_from.append(client_id)
+                            db.update({ 'readed_from': readed_from }, query.id == doc['id'])
                         message = doc['message']
                         break
                 
