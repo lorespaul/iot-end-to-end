@@ -54,3 +54,17 @@ After that you will be able to deploy your app by launch this commands from mess
 like the in `define.h` used for esp8266
 
 * Build and launch app on ios/android/windows.
+
+
+#### Other information
+
+Message broker is used to exchange messages between flutter app and esp8266.
+
+Esp8266 listen for messages on topic `home-light` and change his status based on messages content. Flutter app send these messages that are managed in a queue.
+
+Esp8266 send a message on topic `home-light-reponse` at boot and on status change, but set `expire=never` on request so this message is not enqueued. Instead it will update a previouse message (that can't expire) with new sent string. So every topic can have only one message not expirable.
+
+Flutter app listen on this topic in order to show current status of the actuator.
+
+
+Topic names are hard coded in flutter app and iot_esp.ino
