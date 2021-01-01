@@ -24,7 +24,6 @@ const String PUBLISH = "publish";
 const String MESSAGE = "message";
 const String ON = "ON";
 const String OFF = "OFF";
-const String GET_STATUS = "STATUS";
 
 String actuatorStatus;
 String clientId = "";
@@ -126,15 +125,13 @@ void handleResponse(void* optParm, AsyncHTTPRequest* request, int readyState){
       Serial.print("Async http response text: ");
       Serial.println(response);
 
-      bool found = true;
+      bool found = false;
       if(response == ON){
+        found = actuatorStatus != ON;
         actuatorStatus = ON;
       } else if(response == OFF){
+        found = actuatorStatus != OFF;
         actuatorStatus = OFF;
-      } else if(response == GET_STATUS){
-        response = actuatorStatus; 
-      } else {
-        found = false;
       }
 
       if(found){
@@ -154,7 +151,7 @@ void handleResponse(void* optParm, AsyncHTTPRequest* request, int readyState){
 
 void sendTopicResponse(){
   if(topicResponse != ""){
-    String url = HOST + DIVISOR + PUBLISH + DIVISOR + TOPIC_RESPONSE + DIVISOR + MESSAGE + DIVISOR + topicResponse;
+    String url = HOST + DIVISOR + PUBLISH + DIVISOR + TOPIC_RESPONSE + DIVISOR + MESSAGE + DIVISOR + topicResponse + "?expire=never";
     topicResponse = "";
     Serial.print(clientId);
     Serial.print(": ");

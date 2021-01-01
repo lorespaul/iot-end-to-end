@@ -10,11 +10,12 @@ class MessageService {
   final String topicResponse = "home-light-response";
   final String publish = "publish";
   final String message = "message";
+  final String last = "last";
 
-  Future<String> getMessage(bool pool) async {
-    var endpoint = "$host/$subscribe/$topicResponse";
+  Future<String> getMessage({pool = false}) async {
+    var endpoint = "$host/$subscribe/$topicResponse?last=true";
     if (pool) {
-      endpoint += "?poll=true";
+      endpoint += "&poll=true";
     }
     var result = await client.get(endpoint);
     return result.body;
