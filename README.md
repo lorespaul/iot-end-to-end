@@ -8,9 +8,9 @@ This repository contains three folders:
 
 Useful hardware on Amazon.it:
 
-* esp8266 with relay switch: [https://www.amazon.it/gp/product/B07RKVJ3S8/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1]()
-* esp8266 programmer: [https://www.amazon.it/AZDelivery-ESP8266-Arduino-adattatore-gratuito/dp/B078J7LDLY/ref=sr_1_14?__mk_it_IT=%C3%85M%C3%85%C5%BD%C3%95%C3%91&dchild=1&keywords=esp8266+programmer&qid=1609518234&s=electronics&sr=1-14]()
-* 5V/600mA power supply: [https://www.amazon.it/gp/product/B079138QY1/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1]()
+* [esp8266 with relay switch](https://www.amazon.it/gp/product/B07RKVJ3S8/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1)
+* [esp8266 programmer](https://www.amazon.it/AZDelivery-ESP8266-Arduino-adattatore-gratuito/dp/B078J7LDLY/ref=sr_1_14?__mk_it_IT=%C3%85M%C3%85%C5%BD%C3%95%C3%91&dchild=1&keywords=esp8266+programmer&qid=1609518234&s=electronics&sr=1-14)
+* [5V/600mA power supply](https://www.amazon.it/gp/product/B079138QY1/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1)
 
 
 ### Setup message broker
