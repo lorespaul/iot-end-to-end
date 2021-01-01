@@ -3,7 +3,7 @@
 This repository contains three folders:
 
 * iot_esp is an Arduino project that can be deployed to an esp8266 to perform on/off switch
-* message-broker is a simple bus made in python with flask, conteinerized with docker and ready to deploy on heroku
+* message-broker is a simple bus made in python with flask, conteinerized with docker and ready to deploy on [Heroku](https://dashboard.heroku.com/)
 * on_off_app is a flutter app that can be used to switch on and off GPIO0 of esp8266
 
 Useful hardware on Amazon.it:
