@@ -10,12 +10,17 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
   static const String _ON = "ON";
   static const String _OFF = "OFF";
 
-  String status = _OFF;
+  String _status;
+  bool _buttonDisabled;
 
   final MessageService _messageService = MessageService();
   Future<String> _futureMessage;
 
-  _OnOffSwitchState() {
+  @override
+  void initState() {
+    super.initState();
+    _status = _OFF;
+    _buttonDisabled = false;
     _futureMessage = _messageService.getMessage();
   }
 
@@ -30,39 +35,42 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           child: FutureBuilder<String>(
             future: _futureMessage,
             builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-              if (snapshot.connectionState == ConnectionState.done) {
+              if (snapshot.connectionState == ConnectionState.done &&
+                  snapshot.data != null) {
                 print('response ${snapshot.data}');
-                if (status != snapshot.data) {
-                  status = snapshot.data;
-                }
+                _status = snapshot.data;
               }
-              return Text('Device is $status');
+              return Text('Device is $_status');
             },
           ),
         ),
         RaisedButton(
           child: Text('Switch'),
           onPressed: () async {
-            final sendStatus = status == _OFF ? _ON : _OFF;
-            print('sending message $sendStatus');
-            final sent = await _messageService.sendMessage(sendStatus);
-            if (sent) {
-              String newStatus;
-              int count = 0;
-              do {
-                await Future.delayed(Duration(milliseconds: 500));
-                newStatus = await _messageService.getMessage();
-                count++;
-              } while (newStatus == status && count < 10);
-              if (newStatus != status) {
+            if (!_buttonDisabled) {
+              _buttonDisabled = true;
+              final sendStatus = _status == _OFF ? _ON : _OFF;
+              print('sending message $sendStatus');
+              final sent = await _messageService.sendMessage(sendStatus);
+              if (sent) {
+                String newStatus;
+                int count = 0;
+                do {
+                  await Future.delayed(Duration(milliseconds: 500));
+                  newStatus = await _messageService.getMessage();
+                  count++;
+                } while (newStatus == _status && count < 10);
                 setState(() {
-                  _futureMessage = Future.value(newStatus);
+                  if (newStatus != _status) {
+                    _futureMessage = Future.value(newStatus);
+                  } else {
+                    print('bad response');
+                  }
+                  _buttonDisabled = false;
                 });
               } else {
-                print('response not readed');
+                print('message not sent');
               }
-            } else {
-              print('message not sent');
             }
           },
         ),

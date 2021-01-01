@@ -10,7 +10,7 @@
 #include "define.h"
 
 // 10s = 10 seconds to not flooding the server
-#define HTTP_REQUEST_INTERVAL_MS 10000
+#define HTTP_REQUEST_INTERVAL_MS 5000
 #define PINOUT 0
 #define DIVISOR '/'
 
@@ -58,6 +58,9 @@ void setup() {
       settingMode = false;
       evaluateClientId();
       startWebServer();
+
+      topicResponse = actuatorStatus;
+      sendTopicResponse();
       
       asyncRequest.setDebug(false);
       asyncRequest.onReadyStateChange(handleResponse);

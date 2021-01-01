@@ -53,7 +53,7 @@ def publish(topic, message):
 
     expire = flask.request.args.get('expire')
     if expire is None or expire == '':
-        expire = '600'
+        expire = '30'
 
     query = tinydb.Query()
 
