@@ -25,7 +25,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     _status = _OFF;
     _isLoading = false;
     _isSwitchDisabled = false;
-    _update();
+    _futureMessage = _messageService.getMessage(pool: true);
   }
 
   @override
@@ -54,12 +54,13 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                       print('response ${snapshot.data}');
                       _status = snapshot.data;
                     }
-                    var statusTran = "...";
+                    String statusTran;
                     switch (_status) {
                       case _ON:
                         statusTran = AppLocalizations.of(context).isOn;
                         break;
                       case _OFF:
+                      default:
                         statusTran = AppLocalizations.of(context).isOff;
                         break;
                     }
