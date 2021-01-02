@@ -1,0 +1,9 @@
+{
+    "deviceStatusIs": "Il dispoitivo è",
+    "goSwitch": "Switch",
+    "goUpdate": "Aggiorna",
+    "errorUpdate": "Non è stato possibile ricevere lo stato del dispositivo. Clicca qui per aggiornare.",
+    "errorRetry": "Non è stato possibile mandare il comando di switch. Clicca qui per riprovare.",
+    "isOn": "acceso",
+    "isOff": "spento"
+}
