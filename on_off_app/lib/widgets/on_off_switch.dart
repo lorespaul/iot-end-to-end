@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:on_off_app/services/message_service.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class OnOffSwitch extends StatefulWidget {
   @override
@@ -24,7 +25,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     _status = _OFF;
     _isLoading = false;
     _isSwitchDisabled = false;
-    _futureMessage = _messageService.getMessage(pool: true);
+    _update();
   }
 
   @override
@@ -53,8 +54,17 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                       print('response ${snapshot.data}');
                       _status = snapshot.data;
                     }
+                    var statusTran = "...";
+                    switch (_status) {
+                      case _ON:
+                        statusTran = AppLocalizations.of(context).isOn;
+                        break;
+                      case _OFF:
+                        statusTran = AppLocalizations.of(context).isOff;
+                        break;
+                    }
                     return Text(
-                      'Device is $_status',
+                      '${AppLocalizations.of(context).deviceStatusIs} $statusTran',
                       style: TextStyle(color: Colors.black87),
                     );
                   },
@@ -71,7 +81,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                     textColor: Colors.white,
                     color: Colors.blue,
                     child: Text(
-                      'Switch',
+                      AppLocalizations.of(context).goSwitch,
                       style: TextStyle(fontSize: 20),
                     ),
                     onPressed: _switch,
@@ -84,7 +94,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                     textColor: Colors.white,
                     color: Colors.blue,
                     child: Text(
-                      'Update',
+                      AppLocalizations.of(context).goUpdate,
                       style: TextStyle(fontSize: 20),
                     ),
                     onPressed: _update,
@@ -167,14 +177,14 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
         });
 
         if (!updateFuture) {
-          _showErrorMessage('Can\'t get device status. Click here to update.');
+          _showErrorMessage(AppLocalizations.of(context).errorUpdate);
         }
       } else {
         setState(() {
           _isLoading = false;
         });
         _showErrorMessage(
-          'Can\'t get device status. Click here to retry.',
+          AppLocalizations.of(context).errorRetry,
           sendMessage: true,
         );
       }
@@ -187,7 +197,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
         content: Text(message),
         duration: const Duration(minutes: 5),
         action: SnackBarAction(
-          label: 'UPDATE',
+          label: AppLocalizations.of(context).goUpdate,
           onPressed: () {
             if (sendMessage) {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();

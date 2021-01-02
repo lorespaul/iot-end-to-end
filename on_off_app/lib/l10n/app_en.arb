@@ -1,0 +1,9 @@
+{
+    "deviceStatusIs": "Device is",
+    "goSwitch": "Switch",
+    "goUpdate": "Update",
+    "errorUpdate": "Can't get device status. Click here to update.",
+    "errorRetry": "Can't send switch message. Click here to retry.",
+    "isOn": "ON",
+    "isOff": "OFF"
+}
