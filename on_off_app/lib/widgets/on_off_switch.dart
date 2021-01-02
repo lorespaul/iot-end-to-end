@@ -14,6 +14,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
   String _status;
   bool _isLoading;
   bool _isSwitchDisabled;
+  int _errorMessageCounter;
 
   final MessageService _messageService = MessageService();
   Future<String> _futureMessage;
@@ -24,6 +25,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     _status = _OFF;
     _isLoading = false;
     _isSwitchDisabled = false;
+    _errorMessageCounter = 0;
     _futureMessage = _messageService.getMessage(pool: true);
   }
 
@@ -63,15 +65,33 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
               Container(
                 height: 100.0,
               ),
-              RaisedButton(
-                padding: const EdgeInsets.fromLTRB(40.0, 20.0, 40.0, 20.0),
-                textColor: Colors.white,
-                color: Colors.blue,
-                child: Text(
-                  'Switch',
-                  style: TextStyle(fontSize: 20),
-                ),
-                onPressed: _switch,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RaisedButton(
+                    padding: const EdgeInsets.fromLTRB(40.0, 20.0, 40.0, 20.0),
+                    textColor: Colors.white,
+                    color: Colors.blue,
+                    child: Text(
+                      'Switch',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    onPressed: _switch,
+                  ),
+                  Container(
+                    width: 20.0,
+                  ),
+                  RaisedButton(
+                    padding: const EdgeInsets.fromLTRB(40.0, 20.0, 40.0, 20.0),
+                    textColor: Colors.white,
+                    color: Colors.blue,
+                    child: Text(
+                      'Update',
+                      style: TextStyle(fontSize: 20),
+                    ),
+                    onPressed: _update,
+                  ),
+                ],
               ),
             ],
           ),
@@ -102,8 +122,23 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     );
   }
 
+  void _update() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    if (!_isLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+      _status = await _messageService.getMessage();
+      setState(() {
+        _futureMessage = Future.value(_status);
+        _isLoading = false;
+        _isSwitchDisabled = false;
+      });
+    }
+  }
+
   void _switch({sendMessage = true}) async {
-    if (!_isLoading && (!_isSwitchDisabled || !sendMessage)) {
+    if (!_isLoading && !_isSwitchDisabled) {
       setState(() {
         _isLoading = true;
         _isSwitchDisabled = true;
@@ -139,7 +174,6 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
       } else {
         setState(() {
           _isLoading = false;
-          _isSwitchDisabled = false;
         });
         _showErrorMessage(sendMessage: true);
       }
@@ -157,6 +191,14 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           label: 'UPDATE',
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            if (!sendMessage) {
+              sendMessage = (_errorMessageCounter % 2) != 0;
+              _errorMessageCounter++;
+            }
+            if (sendMessage) {
+              _errorMessageCounter = 0;
+            }
+            _isSwitchDisabled = false;
             _switch(sendMessage: sendMessage);
           },
         ),
