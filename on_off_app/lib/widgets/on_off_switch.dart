@@ -121,7 +121,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           await Future.delayed(Duration(milliseconds: 500));
           newStatus = await _messageService.getMessage();
           count++;
-        } while (newStatus == _status && count < 1);
+        } while (newStatus == _status && count < 20);
 
         final updateFuture = newStatus != _status;
 
