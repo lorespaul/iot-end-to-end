@@ -12,7 +12,7 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
-  final title = 'On Off Switch';
+  final title = 'Home Switch';
 
   @override
   Widget build(BuildContext context) {

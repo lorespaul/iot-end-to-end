@@ -4,7 +4,7 @@ import 'package:on_off_app/http/http_client.dart';
 class MessageService {
   final Client client = HttpClient.getClient();
 
-  final String host = "http://flask-message-broker.herokuapp.com/api";
+  final String host = "https://flask-message-broker.herokuapp.com/api";
   final String subscribe = "subscribe";
   final String topic = "home-light";
   final String topicResponse = "home-light-response";
