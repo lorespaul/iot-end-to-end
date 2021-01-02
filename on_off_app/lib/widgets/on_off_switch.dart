@@ -137,12 +137,16 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           _showErrorMessage();
         }
       } else {
-        _showErrorMessage();
+        setState(() {
+          _isLoading = false;
+          _isSwitchDisabled = false;
+        });
+        _showErrorMessage(sendMessage: true);
       }
     }
   }
 
-  void _showErrorMessage() {
+  void _showErrorMessage({sendMessage = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text(
@@ -153,7 +157,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           label: 'UPDATE',
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            _switch(sendMessage: false);
+            _switch(sendMessage: sendMessage);
           },
         ),
       ),
