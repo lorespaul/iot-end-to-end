@@ -13,6 +13,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
 
   String _status;
   bool _isLoading;
+  bool _isSwitchDisabled;
 
   final MessageService _messageService = MessageService();
   Future<String> _futureMessage;
@@ -22,6 +23,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     super.initState();
     _status = _OFF;
     _isLoading = false;
+    _isSwitchDisabled = false;
     _futureMessage = _messageService.getMessage(pool: true);
   }
 
@@ -51,7 +53,10 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                       print('response ${snapshot.data}');
                       _status = snapshot.data;
                     }
-                    return Text('Device is $_status');
+                    return Text(
+                      'Device is $_status',
+                      style: TextStyle(color: Colors.black87),
+                    );
                   },
                 ),
               ),
@@ -59,36 +64,14 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
                 height: 100.0,
               ),
               RaisedButton(
-                child: Text('Switch'),
-                onPressed: () async {
-                  if (!_isLoading) {
-                    setState(() {
-                      _isLoading = true;
-                    });
-                    final sendStatus = _status == _OFF ? _ON : _OFF;
-                    print('sending message $sendStatus');
-                    final sent = await _messageService.sendMessage(sendStatus);
-                    if (sent) {
-                      String newStatus;
-                      int count = 0;
-                      do {
-                        await Future.delayed(Duration(milliseconds: 500));
-                        newStatus = await _messageService.getMessage();
-                        count++;
-                      } while (newStatus == _status && count < 20);
-                      setState(() {
-                        if (newStatus != _status) {
-                          _futureMessage = Future.value(newStatus);
-                        } else {
-                          print('bad response');
-                        }
-                        _isLoading = false;
-                      });
-                    } else {
-                      print('message not sent');
-                    }
-                  }
-                },
+                padding: const EdgeInsets.fromLTRB(40.0, 20.0, 40.0, 20.0),
+                textColor: Colors.white,
+                color: Colors.blue,
+                child: Text(
+                  'Switch',
+                  style: TextStyle(fontSize: 20),
+                ),
+                onPressed: _switch,
               ),
             ],
           ),
@@ -106,7 +89,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           child: Container(
             color: Colors.black.withOpacity(0.7),
             child: SpinKitRotatingCircle(
-              color: Colors.white,
+              color: Colors.blue,
               size: 50.0,
             ),
           ),
@@ -116,6 +99,64 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
 
     return Stack(
       children: children,
+    );
+  }
+
+  void _switch({sendMessage = true}) async {
+    if (!_isLoading && (!_isSwitchDisabled || !sendMessage)) {
+      setState(() {
+        _isLoading = true;
+        _isSwitchDisabled = true;
+      });
+      final sendStatus = _status == _OFF ? _ON : _OFF;
+      print('sending message $sendStatus');
+
+      final sent =
+          sendMessage ? await _messageService.sendMessage(sendStatus) : true;
+
+      if (sent) {
+        String newStatus;
+        int count = 0;
+        do {
+          await Future.delayed(Duration(milliseconds: 500));
+          newStatus = await _messageService.getMessage();
+          count++;
+        } while (newStatus == _status && count < 1);
+
+        final updateFuture = newStatus != _status;
+
+        setState(() {
+          if (updateFuture) {
+            _futureMessage = Future.value(newStatus);
+            _isSwitchDisabled = false;
+          }
+          _isLoading = false;
+        });
+
+        if (!updateFuture) {
+          _showErrorMessage();
+        }
+      } else {
+        _showErrorMessage();
+      }
+    }
+  }
+
+  void _showErrorMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Can\'t get device status. Click here to retry.',
+        ),
+        duration: const Duration(minutes: 5),
+        action: SnackBarAction(
+          label: 'UPDATE',
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            _switch(sendMessage: false);
+          },
+        ),
+      ),
     );
   }
 }
