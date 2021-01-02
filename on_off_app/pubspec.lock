@@ -147,7 +147,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_dotenv:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_dotenv
       url: "https://pub.dartlang.org"
@@ -159,14 +159,14 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_guid:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_guid
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.1.0"
   flutter_spinkit:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_spinkit
       url: "https://pub.dartlang.org"
@@ -195,14 +195,14 @@ packages:
     source: hosted
     version: "1.2.0"
   http:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: http
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.12.2"
   http_interceptor:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: http_interceptor
       url: "https://pub.dartlang.org"
@@ -375,7 +375,7 @@ packages:
     source: hosted
     version: "2.1.0"
   shared_preferences:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: shared_preferences
       url: "https://pub.dartlang.org"
