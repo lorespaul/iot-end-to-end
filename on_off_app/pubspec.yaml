@@ -41,6 +41,7 @@ dev_dependencies:
   flutter_dotenv: ^2.1.0
   shared_preferences: ^0.5.12+4
   flutter_guid: ^0.1.0
+  flutter_spinkit: "^4.1.2"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
