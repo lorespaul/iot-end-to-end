@@ -14,7 +14,6 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
   String _status;
   bool _isLoading;
   bool _isSwitchDisabled;
-  int _errorMessageCounter;
 
   final MessageService _messageService = MessageService();
   Future<String> _futureMessage;
@@ -25,7 +24,6 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
     _status = _OFF;
     _isLoading = false;
     _isSwitchDisabled = false;
-    _errorMessageCounter = 0;
     _futureMessage = _messageService.getMessage(pool: true);
   }
 
@@ -169,37 +167,34 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
         });
 
         if (!updateFuture) {
-          _showErrorMessage();
+          _showErrorMessage('Can\'t get device status. Click here to update.');
         }
       } else {
         setState(() {
           _isLoading = false;
         });
-        _showErrorMessage(sendMessage: true);
+        _showErrorMessage(
+          'Can\'t get device status. Click here to retry.',
+          sendMessage: true,
+        );
       }
     }
   }
 
-  void _showErrorMessage({sendMessage = false}) {
+  void _showErrorMessage(String message, {sendMessage = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'Can\'t get device status. Click here to retry.',
-        ),
+        content: Text(message),
         duration: const Duration(minutes: 5),
         action: SnackBarAction(
           label: 'UPDATE',
           onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            if (!sendMessage) {
-              sendMessage = (_errorMessageCounter % 2) != 0;
-              _errorMessageCounter++;
-            }
             if (sendMessage) {
-              _errorMessageCounter = 0;
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              _switch(sendMessage: sendMessage);
+            } else {
+              _update();
             }
-            _isSwitchDisabled = false;
-            _switch(sendMessage: sendMessage);
           },
         ),
       ),
