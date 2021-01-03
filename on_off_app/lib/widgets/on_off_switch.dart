@@ -202,6 +202,7 @@ class _OnOffSwitchState extends State<OnOffSwitch> {
           onPressed: () {
             if (sendMessage) {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              _isSwitchDisabled = false;
               _switch(sendMessage: sendMessage);
             } else {
               _update();
