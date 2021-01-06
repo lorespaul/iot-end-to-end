@@ -53,41 +53,32 @@ void setup() {
   digitalWrite(PINOUT, HIGH);
   actuatorStatus = OFF;
   
-  if (restoreConfig()) {
-    if (checkConnection()) {
-      settingMode = false;
-      evaluateClientId();
-      startWebServer();
-
-      topicResponse = actuatorStatus;
-      sendTopicResponse();
-      
-      asyncRequest.setDebug(false);
-      asyncRequest.onReadyStateChange(handleResponse);
-      asyncRequest.setTimeout(3600);
-      sendAsyncRequest.start();
-      sendRequest();
-      
-      return;
-    }
+  if(!initConnection(true)){
+    settingMode = true;
+    setupMode();
   }
-  settingMode = true;
-  setupMode();
 }
 
 void loop() {
   if (settingMode) {
     dnsServer.processNextRequest();
   } else {
-    sendAsyncRequest.update();
-    
-    if(topicResponse == ON){
-      digitalWrite(PINOUT, LOW);
-    } else if(topicResponse == OFF){
-      digitalWrite(PINOUT, HIGH);
+    if (WiFi.status() != WL_CONNECTED) {
+      asyncRequest.abort();
+      sendAsyncRequest.stop();
+      initConnection(false);
     }
-
-    sendTopicResponse();
+    if(WiFi.status() == WL_CONNECTED){
+      sendAsyncRequest.update();
+      
+      if(topicResponse == ON){
+        digitalWrite(PINOUT, LOW);
+      } else if(topicResponse == OFF){
+        digitalWrite(PINOUT, HIGH);
+      }
+      
+      sendTopicResponse(); 
+    }
   }
   webServer.handleClient();
 }
@@ -211,6 +202,7 @@ boolean restoreConfig() {
     }
     Serial.print("Password: ");
     Serial.println(pass);
+    WiFi.disconnect();
     WiFi.begin(ssid.c_str(), pass.c_str());
     return true;
   }
@@ -236,6 +228,33 @@ boolean checkConnection() {
   Serial.println("Timed out.");
   return false;
 }
+
+
+boolean initConnection(boolean isSetup){
+  if (restoreConfig()) {
+    if (checkConnection()) {
+
+      if(isSetup){
+        settingMode = false;
+        evaluateClientId();
+        startWebServer();
+        
+        topicResponse = actuatorStatus;
+        sendTopicResponse();
+      }
+      
+      asyncRequest.setDebug(false);
+      asyncRequest.onReadyStateChange(handleResponse);
+      asyncRequest.setTimeout(3600);
+      sendAsyncRequest.start();
+      sendRequest(); 
+            
+      return true;
+    }
+  }
+  return false;
+}
+
 
 void startWebServer() {
   if (settingMode) {
