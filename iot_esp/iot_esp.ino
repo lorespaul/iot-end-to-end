@@ -18,20 +18,23 @@ const String AUTH_KEY = "Authorization";
 const String CLIENT_KEY = "Client-Id";
 const String HOST = "http://flask-message-broker.herokuapp.com/api";
 const String SUBSCRIBE = "subscribe";
-const String TOPIC = "home-light";
-const String TOPIC_RESPONSE = "home-light-response";
+const String TOPIC = "led-test";
+const String TOPIC_RESPONSE = "led-test-response";
 const String PUBLISH = "publish";
 const String MESSAGE = "message";
 const String ON = "ON";
 const String OFF = "OFF";
+
+unsigned long lastTimestamp = 0;
+int retryConnectCounter = 0;
+boolean retryConnection = false;
 
 String actuatorStatus;
 String clientId = "";
 String topicResponse = "";
 
 const IPAddress apIP(192, 168, 1, 1);
-const char* apSSID = "ESP8266_SETUP";
-boolean settingMode;
+String apSSID = "ESP_";
 String ssidList;
 
 DNSServer dnsServer;
@@ -49,42 +52,76 @@ void setup() {
   EEPROM.begin(512);
   delay(10);
 
+  evaluateClientId();
+  apSSID += clientId;
+
   pinMode(PINOUT, OUTPUT);
   digitalWrite(PINOUT, HIGH);
   actuatorStatus = OFF;
-  
-  if(!initConnection(true)){
-    settingMode = true;
-    setupMode();
-  }
+
+  setupMode();
+  initConnection();
+  startWebServer();
 }
 
+
 void loop() {
-  if (settingMode) {
-    dnsServer.processNextRequest();
-  } else {
-    if (WiFi.status() != WL_CONNECTED) {
-      asyncRequest.abort();
-      sendAsyncRequest.stop();
-      initConnection(false);
-    }
-    if(WiFi.status() == WL_CONNECTED){
-      sendAsyncRequest.update();
-      
-      if(topicResponse == ON){
-        digitalWrite(PINOUT, LOW);
-      } else if(topicResponse == OFF){
-        digitalWrite(PINOUT, HIGH);
+  if (WiFi.status() != WL_CONNECTED) { // handle retry connection
+    
+    asyncRequest.abort();
+    sendAsyncRequest.stop();
+    
+    if(retryConnectCounter == 0){
+      retryConnection = wifiBegin();
+      if(retryConnection){
+        Serial.print("Connection lost. Retry to connect Wi-Fi");
       }
-      
-      sendTopicResponse(); 
     }
+    
+    unsigned long timestamp = millis();
+    if(retryConnection && timestamp - lastTimestamp >= 500){
+      lastTimestamp = timestamp;
+      retryConnectCounter++;
+      Serial.print(".");
+      if(retryConnectCounter == 30){
+        lastTimestamp = 0;
+        retryConnectCounter = 0;
+        Serial.println("Timed out.");
+      }
+    }
+  } else { // handle standard activities
+
+    if(retryConnection){ // handle reconnection OK
+      retryConnection = false;
+      retryConnectCounter = 0;
+      sendAsyncRequest.start();
+      sendRequest();
+      
+      Serial.println();
+      Serial.println("Wi-Fi connected!");
+    }
+    
+    sendAsyncRequest.update();
+    
+    if(topicResponse == ON){
+      digitalWrite(PINOUT, LOW);
+    } else if(topicResponse == OFF){
+      digitalWrite(PINOUT, HIGH);
+    }
+    
+    sendTopicResponse();
   }
+  
+  dnsServer.processNextRequest();
   webServer.handleClient();
 }
 
 
 
+
+/*
+HTTP client sync/async
+*/
 void sendRequest(void){
   static bool requestOpenResult;
   
@@ -141,8 +178,6 @@ void handleResponse(void* optParm, AsyncHTTPRequest* request, int readyState){
   }
 }
 
-
-
 void sendTopicResponse(){
   if(topicResponse != ""){
     String url = HOST + DIVISOR + PUBLISH + DIVISOR + TOPIC_RESPONSE + DIVISOR + MESSAGE + DIVISOR + topicResponse + "?expire=never";
@@ -161,6 +196,11 @@ void sendTopicResponse(){
 }
 
 
+
+
+/*
+Client ID evaluation/loading
+*/
 void evaluateClientId(){
   char first = char(EEPROM.read(96));
   if(first == 'a'){
@@ -187,8 +227,27 @@ void evaluateClientId(){
 }
 
 
-boolean restoreConfig() {
-  Serial.println("Reading EEPROM...");
+
+/*
+Wi-Fi connection
+*/
+void initConnection(){
+  if (wifiBegin()) {
+    asyncRequest.setDebug(false);
+    asyncRequest.onReadyStateChange(handleResponse);
+    asyncRequest.setTimeout(3600);
+    
+    if(tryConnect()){
+      topicResponse = actuatorStatus;
+      sendTopicResponse();
+      
+      sendAsyncRequest.start();
+      sendRequest(); 
+    }
+  }
+}
+
+boolean wifiBegin() {
   String ssid = "";
   String pass = "";
   if (EEPROM.read(0) != 0) {
@@ -202,23 +261,26 @@ boolean restoreConfig() {
     }
     Serial.print("Password: ");
     Serial.println(pass);
+    /*if(!checkNetworkExists(ssid)){
+      return false;
+    }*/
+    
     WiFi.disconnect();
     WiFi.begin(ssid.c_str(), pass.c_str());
     return true;
   }
   else {
-    Serial.println("Config not found.");
     return false;
   }
 }
 
-boolean checkConnection() {
+boolean tryConnect() {
   int count = 0;
   Serial.print("Waiting for Wi-Fi connection");
   while ( count < 30 ) {
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println();
-      Serial.println("Connected!");
+      Serial.println("Wi-Fi connected!");
       return (true);
     }
     delay(500);
@@ -230,94 +292,12 @@ boolean checkConnection() {
 }
 
 
-boolean initConnection(boolean isSetup){
-  if (restoreConfig()) {
-    if (checkConnection()) {
 
-      if(isSetup){
-        settingMode = false;
-        evaluateClientId();
-        startWebServer();
-        
-        topicResponse = actuatorStatus;
-        sendTopicResponse();
-      }
-      
-      asyncRequest.setDebug(false);
-      asyncRequest.onReadyStateChange(handleResponse);
-      asyncRequest.setTimeout(3600);
-      sendAsyncRequest.start();
-      sendRequest(); 
-            
-      return true;
-    }
-  }
-  return false;
-}
-
-
-void startWebServer() {
-  if (settingMode) {
-    Serial.print("Starting Web Server at ");
-    Serial.println(WiFi.softAPIP());
-    webServer.on("/settings", []() {
-      String s = "<h1>Wi-Fi Settings</h1><p>Please enter your password by selecting the SSID.</p>";
-      s += "<form method=\"get\" action=\"setap\"><label>SSID: </label><select name=\"ssid\">";
-      s += ssidList;
-      s += "</select><br>Password: <input name=\"pass\" length=64 type=\"password\"><input type=\"submit\"></form>";
-      webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
-    });
-    webServer.on("/setap", []() {
-      for (int i = 0; i < 96; ++i) {
-        EEPROM.write(i, 0);
-      }
-      String ssid = urlDecode(webServer.arg("ssid"));
-      Serial.print("SSID: ");
-      Serial.println(ssid);
-      String pass = urlDecode(webServer.arg("pass"));
-      Serial.print("Password: ");
-      Serial.println(pass);
-      Serial.println("Writing SSID to EEPROM...");
-      for (int i = 0; i < ssid.length(); ++i) {
-        EEPROM.write(i, ssid[i]);
-      }
-      Serial.println("Writing Password to EEPROM...");
-      for (int i = 0; i < pass.length(); ++i) {
-        EEPROM.write(32 + i, pass[i]);
-      }
-      EEPROM.commit();
-      Serial.println("Write EEPROM done!");
-      String s = "<h1>Setup complete.</h1><p>device will be connected to \"";
-      s += ssid;
-      s += "\" after the restart.";
-      webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
-      ESP.restart();
-    });
-    webServer.onNotFound([]() {
-      String s = "<h1>AP mode</h1><p><a href=\"/settings\">Wi-Fi Settings</a></p>";
-      webServer.send(200, "text/html", makePage("AP mode", s));
-    });
-  } else {
-    Serial.print("Starting Web Server at ");
-    Serial.println(WiFi.localIP());
-    webServer.on("/", []() {
-      String s = "<h1>STA mode</h1><p><a href=\"/reset\">Reset Wi-Fi Settings</a></p>";
-      webServer.send(200, "text/html", makePage("STA mode", s));
-    });
-    webServer.on("/reset", []() {
-      for (int i = 0; i < 96; ++i) {
-        EEPROM.write(i, 0);
-      }
-      EEPROM.commit();
-      String s = "<h1>Wi-Fi settings was reset.</h1><p>Please reset device.</p>";
-      webServer.send(200, "text/html", makePage("Reset Wi-Fi Settings", s));
-    });
-  }
-  webServer.begin();
-}
-
+/*
+Set Wi-Fi mode
+*/
 void setupMode() {
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_AP_STA);
   WiFi.disconnect();
   delay(100);
   int n = WiFi.scanNetworks();
@@ -331,7 +311,6 @@ void setupMode() {
     ssidList += "</option>";
   }
   delay(100);
-  WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apSSID);
   dnsServer.start(53, "*", apIP);
@@ -340,6 +319,79 @@ void setupMode() {
   Serial.print(apSSID);
   Serial.println("\"");
 }
+
+
+/*
+Server
+*/
+void startWebServer() {
+  Serial.print("Starting Web Server at ");
+  Serial.println(WiFi.softAPIP());
+  
+  webServer.on("/settings", []() {
+    String s = "<h1>Wi-Fi Settings</h1><p>Please enter your password by selecting the SSID.</p>";
+    s += "<form method=\"get\" action=\"setap\"><label>SSID: </label><select name=\"ssid\">";
+    s += ssidList;
+    s += "</select><br>Password: <input name=\"pass\" length=64 type=\"password\"><input type=\"submit\"></form>";
+    webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
+  });
+  
+  webServer.on("/setap", []() {
+    for (int i = 0; i < 96; ++i) {
+      EEPROM.write(i, 0);
+    }
+    String ssid = urlDecode(webServer.arg("ssid"));
+    Serial.print("SSID: ");
+    Serial.println(ssid);
+    String pass = urlDecode(webServer.arg("pass"));
+    Serial.print("Password: ");
+    Serial.println(pass);
+    Serial.println("Writing SSID to EEPROM...");
+    for (int i = 0; i < ssid.length(); ++i) {
+      EEPROM.write(i, ssid[i]);
+    }
+    Serial.println("Writing Password to EEPROM...");
+    for (int i = 0; i < pass.length(); ++i) {
+      EEPROM.write(32 + i, pass[i]);
+    }
+    EEPROM.commit();
+    Serial.println("Write EEPROM done!");
+    String s = "<h1>Setup complete.</h1><p>device will be connected to \"";
+    s += ssid;
+    s += "\" after the restart.";
+    webServer.send(200, "text/html", makePage("Wi-Fi Settings", s));
+    ESP.restart();
+  });
+
+  webServer.on("/reset", []() {
+    for (int i = 0; i < 96; ++i) {
+      EEPROM.write(i, 0);
+    }
+    EEPROM.commit();
+    String s = "<h1>Wi-Fi settings was reset.</h1><p>Please restart device.</p>";
+    webServer.send(200, "text/html", makePage("Reset Wi-Fi Settings", s));
+  });
+    
+  webServer.on("/", []() {
+    String s = "<h1>Setup</h1><p><a href=\"/settings\">Wi-Fi Settings</a></p>";
+    s += "<p><a href=\"/reset\">Reset Wi-Fi Settings</a></p>";
+    webServer.send(200, "text/html", makePage("AP mode", s));
+  });
+
+  webServer.onNotFound([]() {
+    String s = "<h1>Setup</h1><p><a href=\"/settings\">Wi-Fi Settings</a></p>";
+    s += "<p><a href=\"/reset\">Reset Wi-Fi Settings</a></p>";
+    webServer.send(200, "text/html", makePage("AP mode", s));
+  });
+    
+  Serial.print("Starting Web Server at: ");
+  Serial.print("access point ip -> ");
+  Serial.print(WiFi.softAPIP());
+  Serial.print(" - station ip -> ");
+  Serial.println(WiFi.localIP());
+  webServer.begin();
+}
+
 
 String makePage(String title, String contents) {
   String s = "<!DOCTYPE html><html><head>";
