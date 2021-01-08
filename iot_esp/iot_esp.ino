@@ -251,6 +251,11 @@ boolean checkConnection() {
 
 boolean initConnection(){
   if (restoreConfig()) {
+
+    asyncRequest.setDebug(false);
+    asyncRequest.onReadyStateChange(handleResponse);
+    asyncRequest.setTimeout(3600);
+      
     if (checkConnection()) {
       settingMode = false;
       startWebServer();
@@ -258,9 +263,6 @@ boolean initConnection(){
       topicResponse = actuatorStatus;
       sendTopicResponse();
 
-      asyncRequest.setDebug(false);
-      asyncRequest.onReadyStateChange(handleResponse);
-      asyncRequest.setTimeout(3600);
       sendAsyncRequest.start();
     } else {
       tryReconnect = true;
