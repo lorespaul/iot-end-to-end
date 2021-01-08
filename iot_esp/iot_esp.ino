@@ -9,7 +9,7 @@
 #include <ESP8266TrueRandom.h>
 #include "define.h"
 
-// 10s = 10 seconds to not flooding the server
+
 #define HTTP_REQUEST_INTERVAL_MS 5000
 #define PINOUT 0
 #define DIVISOR '/'
@@ -67,13 +67,11 @@ void loop() {
   if (settingMode) {
     dnsServer.processNextRequest();
   } else {
-    if (WiFi.status() != WL_CONNECTED) {
-      if(!tryReconnect){
-        Serial.println("Device accidentally disconnected");
-        asyncRequest.abort();
-        sendAsyncRequest.stop();
-        tryReconnect = true;
-      }
+    if (WiFi.status() != WL_CONNECTED && !tryReconnect) {
+      Serial.println("Device accidentally disconnected");
+      asyncRequest.abort();
+      sendAsyncRequest.stop();
+      tryReconnect = true;
     }
     if(WiFi.status() == WL_CONNECTED){
       if(tryReconnect){
@@ -222,7 +220,7 @@ boolean restoreConfig() {
     }
     Serial.print("Password: ");
     Serial.println(pass);
-    WiFi.disconnect();
+    //WiFi.disconnect();
     WiFi.begin(ssid.c_str(), pass.c_str());
     return true;
   }
@@ -264,7 +262,10 @@ boolean initConnection(){
       asyncRequest.onReadyStateChange(handleResponse);
       asyncRequest.setTimeout(3600);
       sendAsyncRequest.start();
+    } else {
+      tryReconnect = true;
     }
+    // Start AP only if wifi credentials not in eeprom. Change ssid require input pin that force credentials in eeprom to be deleted.
     return true;
   }
   return false;
