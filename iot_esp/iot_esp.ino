@@ -30,7 +30,7 @@ String clientId = "";
 String topicResponse = "";
 
 const IPAddress apIP(192, 168, 1, 1);
-const char* apSSID = "ESP8266_SETUP";
+String apSSID = "ESP_";
 boolean settingMode;
 String ssidList;
 
@@ -48,6 +48,9 @@ void setup() {
   Serial.begin(115200);
   EEPROM.begin(512);
   delay(10);
+
+  evaluateClientId();
+  apSSID += clientId;
 
   pinMode(PINOUT, OUTPUT);
   digitalWrite(PINOUT, HIGH);
@@ -236,7 +239,6 @@ boolean initConnection(boolean isSetup){
 
       if(isSetup){
         settingMode = false;
-        evaluateClientId();
         startWebServer();
         
         topicResponse = actuatorStatus;
