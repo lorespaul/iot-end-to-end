@@ -32,6 +32,7 @@ String topicResponse = "";
 const IPAddress apIP(192, 168, 1, 1);
 String apSSID = "ESP_";
 boolean settingMode;
+boolean tryReconnect = false;
 String ssidList;
 
 DNSServer dnsServer;
@@ -56,7 +57,7 @@ void setup() {
   digitalWrite(PINOUT, HIGH);
   actuatorStatus = OFF;
   
-  if(!initConnection(true)){
+  if(!initConnection()){
     settingMode = true;
     setupMode();
   }
@@ -67,11 +68,27 @@ void loop() {
     dnsServer.processNextRequest();
   } else {
     if (WiFi.status() != WL_CONNECTED) {
-      asyncRequest.abort();
-      sendAsyncRequest.stop();
-      initConnection(false);
+      if(!tryReconnect){
+        Serial.println("Device accidentally disconnected");
+        asyncRequest.abort();
+        sendAsyncRequest.stop();
+        tryReconnect = true;
+      }
     }
     if(WiFi.status() == WL_CONNECTED){
+      if(tryReconnect){
+        tryReconnect = false;
+        // pause before restart (fix a problem with AsyncHTTPRequest_Generic that cause rst of esp8266)
+        for(int i = 0; i < 30; i++){
+          delay(1000);
+        }
+        
+        Serial.print("Connection reestablished at ip address: ");
+        Serial.println(WiFi.localIP());
+        
+        sendAsyncRequest.start();
+      }
+      
       sendAsyncRequest.update();
       
       if(topicResponse == ON){
@@ -221,8 +238,9 @@ boolean checkConnection() {
   while ( count < 30 ) {
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println();
-      Serial.println("Connected!");
-      return (true);
+      Serial.print("Connected with IP address: ");
+      Serial.println(WiFi.localIP());
+      return true;
     }
     delay(500);
     Serial.print(".");
@@ -233,26 +251,21 @@ boolean checkConnection() {
 }
 
 
-boolean initConnection(boolean isSetup){
+boolean initConnection(){
   if (restoreConfig()) {
     if (checkConnection()) {
-
-      if(isSetup){
-        settingMode = false;
-        startWebServer();
-        
-        topicResponse = actuatorStatus;
-        sendTopicResponse();
-      }
+      settingMode = false;
+      startWebServer();
       
+      topicResponse = actuatorStatus;
+      sendTopicResponse();
+
       asyncRequest.setDebug(false);
       asyncRequest.onReadyStateChange(handleResponse);
       asyncRequest.setTimeout(3600);
       sendAsyncRequest.start();
-      sendRequest(); 
-            
-      return true;
     }
+    return true;
   }
   return false;
 }
