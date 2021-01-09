@@ -56,11 +56,30 @@ void setup() {
   pinMode(PINOUT, OUTPUT);
   digitalWrite(PINOUT, HIGH);
   actuatorStatus = OFF;
+
+  WiFi.mode(WIFI_STA);
   
-  if(!initConnection()){
+  if (restoreConfig()) {
+    settingMode = false;
+    
+    asyncRequest.setDebug(false);
+    asyncRequest.onReadyStateChange(handleResponse);
+    asyncRequest.setTimeout(3600);
+      
+    if (checkConnection()) {
+      topicResponse = actuatorStatus;
+      sendTopicResponse();
+
+      sendAsyncRequest.start();
+    } else {
+      tryReconnect = true;
+    }
+  } else {
+    // Start AP only if wifi credentials not in eeprom. Change ssid require input pin that force credentials in eeprom to be deleted.
     settingMode = true;
-    setupMode();
+    setapMode();
   }
+  startWebServer();
 }
 
 void loop() {
@@ -249,29 +268,6 @@ boolean checkConnection() {
 }
 
 
-boolean initConnection(){
-  if (restoreConfig()) {
-
-    asyncRequest.setDebug(false);
-    asyncRequest.onReadyStateChange(handleResponse);
-    asyncRequest.setTimeout(3600);
-      
-    if (checkConnection()) {
-      settingMode = false;
-      startWebServer();
-      
-      topicResponse = actuatorStatus;
-      sendTopicResponse();
-
-      sendAsyncRequest.start();
-    } else {
-      tryReconnect = true;
-    }
-    // Start AP only if wifi credentials not in eeprom. Change ssid require input pin that force credentials in eeprom to be deleted.
-    return true;
-  }
-  return false;
-}
 
 
 void startWebServer() {
@@ -334,8 +330,7 @@ void startWebServer() {
   webServer.begin();
 }
 
-void setupMode() {
-  WiFi.mode(WIFI_STA);
+void setapMode() {
   WiFi.disconnect();
   delay(100);
   int n = WiFi.scanNetworks();
@@ -353,7 +348,6 @@ void setupMode() {
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
   WiFi.softAP(apSSID);
   dnsServer.start(53, "*", apIP);
-  startWebServer();
   Serial.print("Starting Access Point at \"");
   Serial.print(apSSID);
   Serial.println("\"");
