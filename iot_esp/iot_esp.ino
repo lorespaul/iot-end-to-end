@@ -53,6 +53,14 @@ void setup() {
   evaluateClientId();
   apSSID += clientId;
 
+  /*for (int i = 0; i < 96; ++i) {
+    EEPROM.write(i, 0);
+  }
+  EEPROM.commit();
+  for (int i = 0; i < 5; ++i) {
+    delay(1000);
+  }*/
+
   pinMode(PINOUT, OUTPUT);
   digitalWrite(PINOUT, HIGH);
   actuatorStatus = OFF;
@@ -209,8 +217,8 @@ boolean restoreConfig() {
   Serial.println("Reading EEPROM...");
   String ssid = "";
   String pass = "";
-  if (EEPROM.read(0) != 0) {
-    for (int i = 0; i < 32; ++i) {
+  if (char(EEPROM.read(0)) == '$') {
+    for (int i = 1; i < 32; ++i) {
       ssid += char(EEPROM.read(i));
     }
     Serial.print("SSID: ");
@@ -296,8 +304,9 @@ void startWebServer() {
       Serial.print("Password: ");
       Serial.println(pass);
       Serial.println("Writing SSID to EEPROM...");
+      EEPROM.write(0, '$');
       for (int i = 0; i < ssid.length(); ++i) {
-        EEPROM.write(i, ssid[i]);
+        EEPROM.write(i+1, ssid[i]);
       }
       Serial.println("Writing Password to EEPROM...");
       for (int i = 0; i < pass.length(); ++i) {
