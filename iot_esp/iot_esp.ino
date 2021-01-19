@@ -131,7 +131,7 @@ void sendRequest(void){
       Serial.println("Can't send bad request");
     }
   } else {
-    Serial.println("Resquest in progress...");
+    Serial.println("Request in progress...");
   }
 }
 
